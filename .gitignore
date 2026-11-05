@@ -1,0 +1,14 @@
+# Local toolchains, dependencies, runtime data, and verification evidence.
+/toolchains/
+/Libraries/
+/ThirdParty/
+/win64/
+/winarm/
+/integration/
+/release/
+/artifacts/
+/dist/
+/ios/bazel-*
+**/__pycache__/
+*.pyc
+.DS_Store

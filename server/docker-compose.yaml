@@ -1,0 +1,24 @@
+services:
+  teamgram:
+    build: .
+    container_name: private-chat-teamgram
+    restart: always
+    environment:
+      MYSQL_URI: "${MYSQL_USER:-teamgram}:${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}@tcp(mysql:3306)/${MYSQL_DATABASE:-teamgram}?charset=utf8mb4&parseTime=true"
+      MINIO_KEY: ${MINIO_ROOT_USER:-minio}
+      MINIO_SECRET: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${TEAMGRAM_HOST_BIND_ADDRESS:-127.0.0.1}:10443:10443"
+      - "${TEAMGRAM_HOST_BIND_ADDRESS:-127.0.0.1}:11443:11443"
+      - "${TEAMGRAM_HOST_BIND_ADDRESS:-127.0.0.1}:5222:5222"
+    networks:
+      - teamgram_net
+
+networks:
+  teamgram_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

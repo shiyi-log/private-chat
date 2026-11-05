@@ -1,0 +1,9 @@
+.git
+.env
+data
+teamgramd/logs
+teamgramd/bin
+!teamgramd/bin/config.json
+!teamgramd/bin/killall.sh
+!teamgramd/bin/runall2.sh
+!teamgramd/bin/runall-docker.sh

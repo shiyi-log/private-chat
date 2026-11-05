@@ -1,0 +1,138 @@
+# Isolated local client integration stack. Only the client gateway is published,
+# and it remains bound to loopback unless the user explicitly changes the bind.
+services:
+  teamgram:
+    build:
+      context: .
+      dockerfile: Dockerfile.localtest
+    image: private-chat-server-localtest:dev
+    container_name: !reset null
+    restart: unless-stopped
+    environment:
+      MYSQL_URI: "${MYSQL_USER:-teamgram}:${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}@tcp(mysql:3306)/${MYSQL_DATABASE:-teamgram}?charset=utf8mb4&parseTime=true"
+      MINIO_KEY: ${MINIO_ROOT_USER:-minio}
+      MINIO_SECRET: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+      PRIVATECHAT_LOCALTEST: "1"
+      PRIVATECHAT_LOCALTEST_PHONES: "12025550101,12025550102"
+      PRIVATECHAT_LOCALTEST_OUTBOX: /run/privatechat-localtest/outbox
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      minio-mc:
+        condition: service_completed_successfully
+    volumes:
+      - ./data/local-integration/otp:/run/privatechat-localtest/outbox
+    healthcheck:
+      test: ["CMD", "python3", "/app/local-dev/check-localtest-health.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
+    ports:
+      - "${TEAMGRAM_HOST_BIND_ADDRESS:-127.0.0.1}:10443:10443"
+      - "${TEAMGRAM_HOST_BIND_ADDRESS:-127.0.0.1}:11443:11443"
+      - "${TEAMGRAM_HOST_BIND_ADDRESS:-127.0.0.1}:5222:5222"
+
+  kafka:
+    container_name: !reset null
+    ports: !reset []
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  kafka-init:
+    image: apache/kafka:3.9.0
+    entrypoint: ["/bin/bash", "-ec"]
+    command:
+      - |
+        for attempt in $$(seq 1 60); do
+          if /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1; then
+            break
+          fi
+          sleep 1
+        done
+        for topic in Inbox-T Sync-T teamgram-log; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic "$$topic" --partitions 1 --replication-factor 1
+        done
+    depends_on:
+      - kafka
+    networks:
+      - teamgram_net
+
+  etcd:
+    container_name: !reset null
+    ports: !reset []
+    volumes: !override
+      - ./data/local-integration/etcd:/etcd-data
+
+  redis:
+    container_name: !reset null
+    ports: !reset []
+    volumes: !override
+      - ./data/local-integration/redis:/data
+
+  mysql:
+    container_name: !reset null
+    ports: !reset []
+    volumes: !override
+      - ./data/local-integration/mysql:/var/lib/mysql
+      - ./teamgramd/deploy/sql:/docker-entrypoint-initdb.d/:ro
+
+  minio:
+    # Use the locally available S3-compatible store for isolated integration.
+    image: rustfs/rustfs@sha256:ed9210d6411d77ffceb70d94b964a3cb7d225983368bc25bebe01e995293dcc2
+    command: server /data
+    container_name: !reset null
+    ports: !reset []
+    volumes: !override
+      - ./data/local-integration/minio:/data
+
+  minio-mc:
+    image: private-chat-server:v0.1.15-preview.1
+    entrypoint: ["python3", "/local-dev/s3-init.py"]
+    command: !reset []
+    container_name: !reset null
+    volumes:
+      - ./scripts/local-dev/s3-init.py:/local-dev/s3-init.py:ro
+
+  jaeger:
+    container_name: !reset null
+    ports: !reset []
+
+  node-exporter:
+    container_name: !reset null
+    ports: !reset []
+
+  prometheus:
+    container_name: !reset null
+    ports: !reset []
+    volumes: !override
+      - ./teamgramd/deploy/prometheus/server/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./data/local-integration/prometheus:/prometheus
+
+  grafana:
+    container_name: !reset null
+    ports: !reset []
+    volumes: !override
+      - ./data/local-integration/grafana:/var/lib/grafana
+
+  elasticsearch:
+    container_name: !reset null
+    ports: !reset []
+
+  kibana:
+    container_name: !reset null
+    ports: !reset []
+
+  filebeat:
+    container_name: !reset null
+
+  go-stash:
+    container_name: !reset null
+
+networks:
+  teamgram_net:
+    ipam: !reset null

@@ -1,0 +1,83 @@
+name: Apple native preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: Native preview to build on the prepared Apple Silicon runner
+        required: true
+        type: choice
+        options: [desktop, ios, both]
+        default: both
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Serialized macOS Debug and iOS simulator builds
+    runs-on: [self-hosted, macOS, ARM64, private-chat-native]
+    timeout-minutes: 360
+    # This group is shared with Android in ci.yml, including release verification.
+    concurrency:
+      group: private-chat-native
+      cancel-in-progress: false
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PRIVATE_CHAT_IOS_CACHE: ${{ github.workspace }}/toolchains/ios-bazel-cache
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Preserve ignored Libraries/ThirdParty dependency trees on this runner.
+          # native_build.py rejects any dirty/untracked source before compiling.
+          clean: false
+          persist-credentials: false
+      - name: Verify prepared runner tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -checkFirstLaunchStatus
+          xcodebuild -version
+          python3 --version
+          cmake --version
+          ninja --version
+          meson --version
+          for tool in autoconf automake libtool pkg-config nasm wget git; do
+            command -v "$tool"
+          done
+          test "$(uname -m)" = arm64
+      - name: Restore iOS content cache
+        if: ${{ inputs.component != 'desktop' }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: toolchains/ios-bazel-cache
+          key: ios-cas-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ios/versions.json', 'ios/MODULE.bazel', 'ios/MODULE.bazel.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ios-cas-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ios/versions.json', 'ios/MODULE.bazel', 'ios/MODULE.bazel.lock') }}-
+      - name: Build macOS Debug preview
+        if: ${{ inputs.component != 'ios' }}
+        run: python3 scripts/ci/native_build.py desktop --jobs 2 --output "$RUNNER_TEMP/desktop-preview-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+      - name: Build iOS simulator preview
+        if: ${{ inputs.component != 'desktop' }}
+        run: python3 scripts/ci/native_build.py ios --jobs 2 --output "$RUNNER_TEMP/ios-preview-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+      - name: Retain native diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: apple-native-logs-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/desktop-preview-${{ github.run_id }}-${{ github.run_attempt }}/build.log
+            ${{ runner.temp }}/ios-preview-${{ github.run_id }}-${{ github.run_attempt }}/build.log
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Retain completed preview archives and provenance
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: apple-native-previews-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/desktop-preview-${{ github.run_id }}-${{ github.run_attempt }}/*.app.tar.gz
+            ${{ runner.temp }}/desktop-preview-${{ github.run_id }}-${{ github.run_attempt }}/build.json
+            ${{ runner.temp }}/ios-preview-${{ github.run_id }}-${{ github.run_attempt }}/*.app.tar.gz
+            ${{ runner.temp }}/ios-preview-${{ github.run_id }}-${{ github.run_attempt }}/build.json
+          if-no-files-found: error
+          retention-days: 14

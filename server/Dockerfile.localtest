@@ -1,0 +1,31 @@
+FROM golang:1.23.0 AS localtest-builder
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+# Rebuild every runtime service against the same protocol schema. Copying only
+# BFF leaves session/media and internal RPC peers on the base image's old layer.
+RUN set -eu; \
+    mkdir -p /out; \
+    for service in \
+      app/service/idgen/cmd/idgen \
+      app/service/status/cmd/status \
+      app/service/dfs/cmd/dfs \
+      app/service/media/cmd/media \
+      app/service/authsession/cmd/authsession \
+      app/service/biz/biz/cmd/biz \
+      app/messenger/msg/cmd/msg \
+      app/messenger/sync/cmd/sync \
+      app/bff/bff/cmd/bff \
+      app/interface/session/cmd/session \
+      app/interface/gnetway/cmd/gnetway; do \
+        go build -tags privatechat_localtest -o "/out/$(basename "$service")" "./$service"; \
+    done
+
+FROM private-chat-server:v0.1.15-preview.1
+COPY --from=localtest-builder /out/ /app/bin/
+RUN sed -i 's/Name: "none"/Name: "localtest"/' /app/etc2/bff.yaml
+COPY scripts/local-dev/check-localtest-health.py scripts/local-dev/run-localtest.sh /app/local-dev/
+RUN chmod +x /app/local-dev/check-localtest-health.py /app/local-dev/run-localtest.sh
+ENTRYPOINT ["/app/local-dev/run-localtest.sh"]

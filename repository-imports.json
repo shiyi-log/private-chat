@@ -1,0 +1,43 @@
+{
+  "created_at": "2026-11-05T02:50:59.182470+00:00",
+  "monorepo_commit": "303d7aab73e71222e17fb5164a266a6089250e89",
+  "monorepo_tree": "6fe9d5de3313ae9559f29f0ef8ee102851011fec",
+  "shallow": false,
+  "components": {
+    "server": {
+      "source": "https://github.com/shiyi-log/private-chat-server.git",
+      "source_head": "13862d9267a628f12b142c0f613467244c1b6bd5",
+      "source_tree": "71f4c880fc5db98d201b2725c2cdc4438d4fd12f",
+      "available_commits": 21,
+      "history_ref": "refs/heads/legacy/server/private-main"
+    },
+    "desktop": {
+      "source": "https://github.com/shiyi-log/private-chat-desktop.git",
+      "source_head": "ea5dc5044ae817acff6a1a498ca81c06955edade",
+      "source_tree": "72716751f5793469222b25fc4e7cef10f2e11f82",
+      "available_commits": 18,
+      "history_ref": "refs/heads/legacy/desktop/private-main"
+    },
+    "android": {
+      "source": "https://github.com/shiyi-log/private-chat-android.git",
+      "source_head": "a6de207091172a0b8a1d30c1f5b1c56497734757",
+      "source_tree": "2b5163ffb0cb057e8efb08fc4eaca6496614dca5",
+      "available_commits": 22,
+      "history_ref": "refs/heads/legacy/android/private-main"
+    },
+    "ios": {
+      "source": "https://github.com/shiyi-log/private-chat-ios.git",
+      "source_head": "4048665d242b58a7116f2dac11f66d12334758ed",
+      "source_tree": "e833793034c3f55816a7221ef55f3296e259cc5b",
+      "available_commits": 17,
+      "history_ref": "refs/heads/legacy/ios/private-main"
+    },
+    "docs": {
+      "source": "https://github.com/shiyi-log/private-chat-docs.git",
+      "source_head": "461c01e889496db68ab48e532d7518a35ffaa6c2",
+      "source_tree": "66f77ee084764657c51a8b2ba63df6fdb7eb2965",
+      "available_commits": 52,
+      "history_ref": "refs/heads/legacy/docs/private-main"
+    }
+  }
+}

@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+
+jobs:
+  static:
+    name: Static configuration and CI contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install locked protocol smoke dependencies
+        run: python -m pip install --requirement docs/scripts/local_mtproto_smoke_requirements.txt
+      - run: bash scripts/ci/check-static.sh
+
+  server-affected:
+    name: Server affected tests and both builds
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+      - run: bash scripts/ci/check-server.sh affected
+
+  server-full:
+    name: Server complete Go suite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+      - name: Install media test tools
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends --yes ffmpeg
+      - name: Run the complete suite without filtering failures
+        run: bash scripts/ci/check-server.sh full
+
+  android:
+    name: Android ARM64 debug native build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    concurrency:
+      group: private-chat-native
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            android/**/*.gradle*
+            android/gradle/wrapper/gradle-wrapper.properties
+      - name: Install source-pinned Android SDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.10.2.4988404'
+      - name: Build and verify the debug APK
+        run: python3 scripts/ci/native_build.py android --jobs 2 --output "$RUNNER_TEMP/android-preview"
+      - name: Retain build diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: android-build-log-${{ github.sha }}
+          path: ${{ runner.temp }}/android-preview/build.log
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Retain verified debug preview and provenance
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: android-debug-preview-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/android-preview/android-debug.apk
+            ${{ runner.temp }}/android-preview/build.json
+          if-no-files-found: error
+          retention-days: 14
+
+  required:
+    name: Required suite gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: [static, server-affected, server-full, android]
+    if: ${{ always() }}
+    steps:
+      - name: Require every verification job to succeed
+        env:
+          STATIC_RESULT: ${{ needs.static.result }}
+          AFFECTED_RESULT: ${{ needs.server-affected.result }}
+          FULL_RESULT: ${{ needs.server-full.result }}
+          ANDROID_RESULT: ${{ needs.android.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for result in "$STATIC_RESULT" "$AFFECTED_RESULT" "$FULL_RESULT" "$ANDROID_RESULT"; do
+            test "$result" = success
+          done
