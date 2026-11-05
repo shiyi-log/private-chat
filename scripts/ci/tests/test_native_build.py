@@ -1,4 +1,4 @@
-"""Native build contracts; opt into the AGP signing fixture with
+"""Native build contracts; opt into the AGP signing and ABI fixture with
 PRIVATE_CHAT_TEST_ANDROID_SIGNING=1 and a prepared JDK17/Android35 SDK.
 """
 import importlib.util
@@ -68,9 +68,8 @@ class NativeBuildTests(unittest.TestCase):
 
     @unittest.skipUnless(os.environ.get("PRIVATE_CHAT_TEST_ANDROID_SIGNING") == "1",
                          "requires the prepared Android SDK and JDK17")
-    def test_android_ci_signing_is_finalized_before_agp_locks_the_dsl(self):
-        # Exercise the exact init script emitted by android_build, but replace
-        # the large native build with a signing configuration check in a tiny app.
+    def test_android_ci_signing_and_preview_abi_are_finalized_before_agp_locks_the_dsl(self):
+        # Exercise the exact init script emitted by android_build in a tiny app.
         class BuildCaptured(Exception):
             pass
 
@@ -101,6 +100,17 @@ android {
     compileSdk 35
     buildToolsVersion '35.0.0'
     defaultConfig { minSdk 23 }
+    flavorDimensions 'minApi'
+    productFlavors {
+        afat {
+            dimension 'minApi'
+            ndk { abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64' }
+        }
+        full {
+            dimension 'minApi'
+            ndk { abiFilters 'armeabi-v7a', 'x86_64' }
+        }
+    }
     signingConfigs {
         debug {
             storeFile file('source-release.keystore')
@@ -123,6 +133,10 @@ tasks.register('checkCiSigning') {
         assert debug.storePassword == 'android'
         assert debug.keyAlias == 'androiddebugkey'
         assert debug.keyPassword == 'android'
+        def abis = android.productFlavors.getByName('afat').ndk.abiFilters
+        assert abis == ['arm64-v8a'] as Set
+        def fullAbis = android.productFlavors.getByName('full').ndk.abiFilters
+        assert fullAbis == ['armeabi-v7a', 'x86_64'] as Set
         def release = android.signingConfigs.release
         assert release.storeFile.canonicalFile == file('source-release.keystore').canonicalFile
         assert release.storePassword == 'source-password'

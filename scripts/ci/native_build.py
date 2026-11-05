@@ -120,6 +120,11 @@ def android_build(run, env, temporary, args):
                     "        keyAlias 'androiddebugkey'\n"
                     "        keyPassword 'android'\n"
                     "      }\n"
+                    "      def preview = android.productFlavors.findByName('afat')\n"
+                    "      if (preview != null) {\n"
+                    "        preview.ndk.abiFilters.clear()\n"
+                    "        preview.ndk.abiFilters.add('arm64-v8a')\n"
+                    "      }\n"
                     "    }\n"
                     "  }\n"
                     "}\n", encoding="utf-8")
