@@ -14,8 +14,19 @@ permissions:
   contents: read
 
 jobs:
+  validate:
+    name: Validate trusted source branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate trusted source branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+
   native:
     name: Serialized macOS Debug and iOS simulator builds
+    needs: validate
     runs-on: [self-hosted, macOS, ARM64, private-chat-native]
     timeout-minutes: 360
     # This group is shared with Android in ci.yml, including release verification.
