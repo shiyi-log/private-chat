@@ -98,6 +98,8 @@ def source_allowed(name):
     if parts[:2] in {("android", "build"), ("ios", "build"), ("desktop", "build")}:
         return False
     base = parts[-1]
+    if re.fullmatch(r".+ \d+\.go", base):
+        return False
     if base == "local.properties" or base == ".DS_Store" or base.startswith("bazel-") or base.endswith(".local.json"):
         return False
     if base == ".env" or (base.startswith(".env.") and not base.endswith((".example", ".sample"))):

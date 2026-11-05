@@ -128,6 +128,30 @@ class PublicSnapshotTests(unittest.TestCase):
                         status_before,
                     )
 
+    def test_snapshot_excludes_conflict_copy_go_files_without_changing_worktree(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory) / "fixture"
+            repository.mkdir()
+            self.make_repository(repository)
+            duplicate = "server/pkg/goffmpeg/tests/transcoding_test 2.go"
+            self.write(repository, duplicate, b"accidental editor conflict copy\n")
+            status_before = self.git(
+                repository, "status", "--porcelain=v1", "-z", "--untracked-files=all"
+            )
+
+            result = self.invoke(repository)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            entries = self.git(
+                repository, "ls-tree", "-r", "--name-only", "-z", result.stdout.strip()
+            ).decode().split("\0")
+            self.assertNotIn(duplicate, entries)
+            self.assertTrue((repository / duplicate).is_file())
+            self.assertEqual(
+                self.git(repository, "status", "--porcelain=v1", "-z", "--untracked-files=all"),
+                status_before,
+            )
+
     def test_snapshot_rejects_unexpected_private_key_without_mutating_git_state(self):
         with tempfile.TemporaryDirectory() as directory:
             repository = Path(directory) / "fixture"
