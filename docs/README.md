@@ -30,9 +30,9 @@ macOS 端由 `private-chat-desktop` 覆盖。目前这五个仓库没有独立 W
 - Android 模拟器：`10.0.2.2:10443`，即模拟器访问宿主机的地址。
 - 真机或跨机器部署需要改为可访问的局域网 IP 或域名，并保持服务端和客户端 MTProto 公钥一致。
 
-当前源码公开不表示已经提供完整的正式客户端安装包。Android ARM64 Debug、iOS 模拟器 Debug 和 macOS universal Debug 均已本地构建；真机签名、正式更新、推送配置及原生多端联调仍有未完成项。
+当前源码公开不表示已经提供完整的正式客户端安装包。Android ARM64 Debug、iOS 模拟器 Debug 和 macOS universal Debug 均已本地构建；统一仓库本轮新 Desktop App 补齐辅助资源后已重新签名，通过严格代码签名验证、独立启动和原生登录。Android101↔iOS102、Desktop101↔iOS102 的跨账号双向文本与附件验收均已通过；真机签名、正式更新及生产推送配置仍需各自验证。
 
-统一候选版本为 `v0.2.0-preview.1`。2026-11-05 本地验证已通过默认与 `privatechat_localtest` 两种全量 Go 测试、两种完整构建以及三个客户端配置验证器。两账号协议烟测通过登录、双向文本和小文件字节/SHA-256 校验。三端原生界面的完整消息和附件验收仍在进行，不能由协议烟测替代；准确状态见 [local-integration.md](local-integration.md)。GitHub Actions 与 Release 以线上实际执行记录为准。
+候选统一源码预览版本为 `v0.2.0-preview.1`。已验证候选基线 `83cab6ef6ec66fa452e11f0abb50618d34a5612c` 的 CI run `42027610583` 五个 jobs 全部成功，Release preview dry run `42028718339` 已生成源码包和 release notes；该 dry run 不代表版本已发布。已发布资产的来源以 Release tag 与 manifest 的 `source_commit` 为准，当前状态见 [GitHub Releases](https://github.com/shiyi-log/private-chat/releases)。2026-11-05 本地验证已通过默认与 `privatechat_localtest` 两种全量 Go 测试、两种完整构建以及三个客户端配置验证器。两账号协议烟测和两组原生跨账号验收分别保留证据，接收端附件均已打开并核对字节数与 SHA-256。Android101 与 Desktop101 同账号历史同步通过：Android 显示了新文本与附件条目，并下载、打开和校验了 iOS 回发的 79 字节附件；Desktop 新发的 63 字节附件仅确认 Android 历史可见，详细状态见 [local-integration.md](local-integration.md)。
 
 ## 文档索引
 
@@ -47,4 +47,4 @@ macOS 端由 `private-chat-desktop` 覆盖。目前这五个仓库没有独立 W
 
 Private Chat consolidates five components in `shiyi-log/private-chat`: a Teamgram-based server, desktop clients for Windows/Linux/macOS, Android, iOS, and documentation. The public first release is a screened source snapshot; the original imported histories remain in the local import workspace for audit. There is no standalone web chat client in this suite.
 
-The server source preview disables the default verification provider. Production sign-in requires a reviewed real provider; the explicit local-test build uses short-lived, transaction-bound random codes for allowlisted local accounts. Current client addresses target local development, and complete native cross-client messaging and upload validation remains outstanding. Upstream and third-party licenses apply independently in each repository; the Apache-2.0 license here covers original documentation only.
+The server source preview disables the default verification provider. Production sign-in requires a reviewed real provider; the explicit local-test build uses short-lived, transaction-bound random codes for allowlisted local accounts. Current client addresses target local development. Native bidirectional text and file transfers passed for Android101 ↔ iOS102 and Desktop101 ↔ iOS102, including receiver-side file opening and byte/SHA-256 checks. Android101 and Desktop101 share an account, and Android showed the new messages and attachment entries in account history. Android also downloaded, opened, and hashed the new 79-byte iOS attachment; the new 63-byte Desktop attachment was visible in history only. Upstream and third-party licenses apply independently in each repository; the Apache-2.0 license here covers original documentation only.

@@ -4,7 +4,9 @@
 
 本地导入工作区保留原始提交历史，供审计和恢复使用；公开的 `shiyi-log/private-chat` 首次发布采用经过筛选的无历史源码快照。这样可以公开五个组件和统一 CI/CD，而不会把导入历史中的服务端私钥一并公开。源码包和公开快照都会排除私钥、签名文件、环境文件、运行数据与本地构建输出；若未来需要公开原始历史，必须先完成密钥轮换和完整历史清理。
 
-当前下一版本名为 `v0.2.0-preview.1`，仍是待验证候选版本。状态截点为 2026-11-05：公开快照的 `main` 已更新到 `3051a14b0b3bd3e7f1d3b4fab1033399f5e4bfc0`。CI run `42021714223` 的静态配置/契约、Server affected tests and both builds、完整 Go suite、Android ARM64 Debug APK 构建与验证、Required suite gates 五项全部成功。[查看该 run](https://github.com/shiyi-log/private-chat/actions/runs/42021714223)。Android 修复把 ABI 限定放在 Gradle DSL 定型阶段；签名 fixture、ARM64 APK 内容检查、签名验证和 provenance 上传均通过。Android APK artifact 与 build provenance 已由该 run 保留 14 天。Apple 原生 workflow 尚无可用的专用 self-hosted runner，因此不能把它算作已完成的线上 Apple 构建。尚无候选 Release artifact 或已发布 Release；本地和 CI 构建结果仍不代表五端原生消息/附件全部互通。
+`v0.2.0-preview.1` 是五组件源码预览的候选版本。2026-11-05 已验证的发布候选基线提交为 `83cab6ef6ec66fa452e11f0abb50618d34a5612c`；CI run `42027610583` 的静态配置/契约、Server affected tests and both builds、完整 Go suite、Android ARM64 Debug APK 构建与验证、Required suite gates 五项全部成功。[查看该 run](https://github.com/shiyi-log/private-chat/actions/runs/42027610583)。Android ARM64 APK 内容检查、签名验证和 provenance 上传均通过，artifact 已由该 run 保留。Release preview dry run `42028718339` 基于该提交生成了源码候选和 release notes，不代表 prerelease 已发布。[查看 Releases](https://github.com/shiyi-log/private-chat/releases) 获取当前发布状态；正式资产对应的源码版本以发布 tag 和 manifest 中的 `source_commit` 为准。Apple 原生 workflow 尚无可用的专用 self-hosted runner，因此不能把它算作已完成的线上 Apple 构建。
+
+独立于 CI 的本地验收已完成 Android101↔iOS102、Desktop101↔iOS102 的原生双向文本与附件往返，接收端均打开附件并核对字节数与 SHA-256。Desktop101 与 Android101 同账号历史同步通过：Android 显示了 Desktop 发送及 iOS 回发的文本和附件条目，并下载、打开和校验了 iOS 新发的 79 字节附件；Desktop 新发的 63 字节附件仅确认在 Android 历史可见，未在 Android 单独下载/hash。Desktop 新 App 完成 arm64+x86_64 构建，补齐辅助资源后重新签名，并通过严格验签、独立启动和原生登录。详细证据与范围见 [local-integration.md](local-integration.md)。
 
 ## 自动检查
 
@@ -18,7 +20,7 @@
 | Android ARM64 debug native build | 完整 Gradle/NDK 构建、ARM64 APK 内容与签名验证、产物 provenance | 生成可核对来源的 ARM64 debug APK；没有运行登录、消息或文件流程 |
 | Required suite gates | 检查上述四项状态都为 `success` | 任意失败、取消或跳过均使该汇总检查失败 |
 
-建议在 `main` 的分支规则中将 **Required suite gates** 设为必需检查。工作流提供检查名称；分支规则需要仓库管理员在 GitHub 设置中配置。GitHub Release 发布同样依赖完整门禁。
+2026-11-05 已配置并读回验证 `main` 的分支保护：必需检查为 **Required suite gates**，绑定 GitHub Actions app `15368`，`strict=true` 要求待合并分支包含最新基线；规则对管理员同样生效（`enforce_admins=true`），禁止 force push 和删除分支。GitHub Release 发布同样依赖完整门禁。
 
 在仓库根目录执行相同的本地命令：
 
@@ -49,6 +51,8 @@ Go 版本从 `server/go.mod` 读取，当前为 `1.23.0`。2026-11-05 的本地�
 包装器使用公开的本地开发 dummy API ID `100001` 和对应的占位 hash，Android debug 签名 key 在临时目录中新建。它不读取操作员 API 身份、不启动客户端、不请求 OTP、不复制运行目录，也不为 App Store 或公网分发签名。新生成的 debug key 不适合升级已使用另一 debug key 安装的应用。
 
 Android 自动构建在 Ubuntu 24.04 上使用 JDK 17、仓库 Gradle 8.7 wrapper、Android API 35、build-tools 35.0.0、NDK 27.2.12479018 与 CMake 3.10.2.4988404。执行的是 `:TMessagesProj_App:assembleAfatDebug -Pandroid.injected.build.abi=arm64-v8a`，输出为 `android-debug.apk` 和 `build.json`。Gradle 下载缓存由 `setup-java` 管理；缓存只加速构建，不代替构建步骤。
+
+`build.json` schema v1 的 `architecture` 字段记录构建宿主 CPU（Python `platform.machine()`），不是目标包 ABI。Android CI 的 Linux runner 为 x86_64；APK 目标架构由构建命令限定为 `arm64-v8a`，并通过检查 APK 中的 `.so` 路径确认仅包含 ARM64 原生库。因此，provenance 中的 `architecture: x86_64` 不表示 APK 含 x86_64 库。
 
 ```sh
 # ANDROID_SDK_ROOT 或 ANDROID_HOME 必须指向已安装上述版本的 SDK；PATH 中需有 JDK17。
@@ -110,8 +114,8 @@ python3 scripts/ci/package_preview.py \
 
 `Release preview` 仅手动触发，默认 `publish=false`。它复用相同提交的完整 `CI`，成功后生成源码候选、manifest、SHA256SUMS 和明确限制的 release notes，再保存为 GitHub Actions artifact。工作流不附加原生 app，单独的 Android 和 Apple 构建 artifact 具有各自的来源证据。
 
-需要实际发布时，仓库管理员应创建 `preview-release` environment，仅允许 `main` 部署，并在该 environment 设置 `PRIVATE_CHAT_RELEASE_ENABLED=true`。缺少该变量时发布步骤失败。可按仓库协作需要配置 required reviewers；它不是本工作流的默认强制要求。检查候选 artifact 后，以 `publish=true` 触发；该请求只允许 `shiyi-log/private-chat` 的 `main`。通过完整门禁及已配置的 environment 规则后，发布 job 才取得 `contents: write` 并创建 GitHub prerelease。已有同名 tag 必须指向被验证的同一提交，已有 Release 不会被覆盖。
+2026-11-05 已配置并读回验证 `preview-release` environment：分支策略仅允许 `main`，environment 变量 `PRIVATE_CHAT_RELEASE_ENABLED=true` 已启用。缺少该变量或值不为 `true` 时发布步骤失败。可按仓库协作需要配置 required reviewers；它不是本工作流的默认强制要求。检查候选 artifact 后，以 `publish=true` 触发；该请求只允许 `shiyi-log/private-chat` 的 `main`。通过完整门禁及已配置的 environment 规则后，发布 job 才取得 `contents: write` 并创建 GitHub prerelease。已有同名 tag 必须指向被验证的同一提交，已有 Release 不会被覆盖。
 
-用户已授权向公开的 `shiyi-log/private-chat` 推送筛选后的统一源码快照并发布预览版；快照和修复后的 Android CI 已推送且完整门禁通过。候选 Release artifact 的 dry run、资产/校验和审查与 prerelease 发布仍待执行。2026-11-05 的 GitHub Dependabot 状态为 226 条 open alerts：25 critical、89 high、82 medium、30 low。此为依赖告警计数，尚未逐条验证可达性、可利用性或整改状态，不应解释为漏洞已确认、已修复或已消除。该预览用于源码评估，不代表生产就绪。后续 CI 与 Release 状态以对应线上运行记录为准；真实短信、生产部署、真机签名与公证需要各自验证。
+筛选后的统一源码快照已推送至公开的 `shiyi-log/private-chat`。截至 2026-11-05，CI run `42027610583` 的完整门禁通过，Release preview dry run `42028718339` 基于已验证候选提交生成了源码包和说明；这两次运行记录的是候选基线，不替代后续发布 tag 与 manifest 中的 `source_commit`。实际公开资产和当前发布状态见 [GitHub Releases](https://github.com/shiyi-log/private-chat/releases)。本地原生互通的已验证范围见 [local-integration.md](local-integration.md)。2026-11-05 的 GitHub Dependabot 状态为 226 条 open alerts：25 critical、89 high、82 medium、30 low。此为依赖告警计数，尚未逐条验证可达性、可利用性或整改状态，不应解释为漏洞已确认、已修复或已消除。该预览用于源码评估，不代表生产就绪；真实短信、生产部署、真机签名与公证需要各自验证。
 
 工作流行为和管理员设置依据 GitHub 官方的 [reusable workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)、[environment protection rules](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments) 和 [concurrency](https://docs.github.com/en/actions/how-tos/choose-when-workflows-run/control-workflow-concurrency) 文档。各 action 使用 2026-11-05 核对的上游 tag 对应完整 commit SHA，升级时应同时检查其 runner 最低版本。
