@@ -111,10 +111,10 @@ def android_build(run, env, temporary, args):
          "-validity", "30", "-dname", "CN=Private Chat CI Debug,O=Private Chat,C=US"], ROOT, env)
     init = temporary / "ci-debug-signing.gradle"
     escaped = str(keystore).replace("\\", "\\\\").replace("'", "\\'")
-    init.write_text("gradle.projectsEvaluated {\n"
-                    "  allprojects { p ->\n"
-                    "    if (p.plugins.hasPlugin('com.android.application')) {\n"
-                    "      p.android.signingConfigs.debug {\n"
+    init.write_text("gradle.beforeProject { p ->\n"
+                    "  p.plugins.withId('com.android.application') {\n"
+                    "    p.androidComponents.finalizeDsl { android ->\n"
+                    "      android.signingConfigs.debug {\n"
                     f"        storeFile p.file('{escaped}')\n"
                     "        storePassword 'android'\n"
                     "        keyAlias 'androiddebugkey'\n"

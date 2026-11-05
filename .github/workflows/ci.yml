@@ -96,6 +96,10 @@ jobs:
         run: |
           set -euo pipefail
           sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.10.2.4988404'
+      - name: Verify CI debug signing before the native build
+        env:
+          PRIVATE_CHAT_TEST_ANDROID_SIGNING: '1'
+        run: python3 -m unittest discover -s scripts/ci/tests -p test_native_build.py -v
       - name: Build and verify the debug APK
         run: python3 scripts/ci/native_build.py android --jobs 2 --output "$RUNNER_TEMP/android-preview"
       - name: Retain build diagnostics

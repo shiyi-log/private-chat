@@ -1,11 +1,15 @@
-"""Failure contracts for native build evidence, without invoking native toolchains."""
+"""Native build contracts; opt into the AGP signing fixture with
+PRIVATE_CHAT_TEST_ANDROID_SIGNING=1 and a prepared JDK17/Android35 SDK.
+"""
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "native_build.py"
@@ -61,6 +65,79 @@ class NativeBuildTests(unittest.TestCase):
             (variant / "output-metadata.json").write_text(json.dumps(metadata))
             with self.assertRaisesRegex(ValueError, "output"):
                 self.native.find_android_product(root)
+
+    @unittest.skipUnless(os.environ.get("PRIVATE_CHAT_TEST_ANDROID_SIGNING") == "1",
+                         "requires the prepared Android SDK and JDK17")
+    def test_android_ci_signing_is_finalized_before_agp_locks_the_dsl(self):
+        # Exercise the exact init script emitted by android_build, but replace
+        # the large native build with a signing configuration check in a tiny app.
+        class BuildCaptured(Exception):
+            pass
+
+        with tempfile.TemporaryDirectory(prefix="private-chat signing '") as directory:
+            temporary = Path(directory)
+            init = None
+
+            def capture(command, cwd, env):
+                nonlocal init
+                if ":TMessagesProj_App:assembleAfatDebug" in command:
+                    init = Path(command[command.index("--init-script") + 1])
+                    raise BuildCaptured
+
+            with self.assertRaises(BuildCaptured):
+                self.native.android_build(capture, dict(os.environ), temporary, SimpleNamespace(jobs=1))
+            self.assertIsNotNone(init)
+            fixture = temporary / "fixture"
+            fixture.mkdir()
+            (fixture / "settings.gradle").write_text("rootProject.name = 'ci-signing-fixture'\n")
+            (fixture / "build.gradle").write_text("""
+buildscript {
+    repositories { google(); mavenCentral() }
+    dependencies { classpath 'com.android.tools.build:gradle:8.6.1' }
+}
+apply plugin: 'com.android.application'
+android {
+    namespace 'test.privatechat.signing'
+    compileSdk 35
+    buildToolsVersion '35.0.0'
+    defaultConfig { minSdk 23 }
+    signingConfigs {
+        debug {
+            storeFile file('source-release.keystore')
+            storePassword 'source-password'
+            keyAlias 'source-alias'
+            keyPassword 'source-key-password'
+        }
+        release {
+            storeFile file('source-release.keystore')
+            storePassword 'source-password'
+            keyAlias 'source-alias'
+            keyPassword 'source-key-password'
+        }
+    }
+}
+tasks.register('checkCiSigning') {
+    doLast {
+        def debug = android.signingConfigs.debug
+        assert debug.storeFile.canonicalFile == file('../ci-debug.keystore').canonicalFile
+        assert debug.storePassword == 'android'
+        assert debug.keyAlias == 'androiddebugkey'
+        assert debug.keyPassword == 'android'
+        def release = android.signingConfigs.release
+        assert release.storeFile.canonicalFile == file('source-release.keystore').canonicalFile
+        assert release.storePassword == 'source-password'
+        assert release.keyAlias == 'source-alias'
+        assert release.keyPassword == 'source-key-password'
+    }
+}
+""", encoding="utf-8")
+            result = subprocess.run(
+                [str(self.native.ROOT / "android/gradlew"), "--no-daemon", "--console=plain",
+                 "--max-workers=1", "--init-script", str(init), "checkCiSigning"],
+                cwd=fixture, env=dict(os.environ), text=True, stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, timeout=180,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
 
 
 if __name__ == "__main__":

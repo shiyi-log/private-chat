@@ -4,7 +4,7 @@
 
 本地导入工作区保留原始提交历史，供审计和恢复使用；公开的 `shiyi-log/private-chat` 首次发布采用经过筛选的无历史源码快照。这样可以公开五个组件和统一 CI/CD，而不会把导入历史中的服务端私钥一并公开。源码包和公开快照都会排除私钥、签名文件、环境文件、运行数据与本地构建输出；若未来需要公开原始历史，必须先完成密钥轮换和完整历史清理。
 
-当前下一版本名为 `v0.2.0-preview.1`，仍是待验证候选版本。状态截点为 2026-11-05：公开快照提交 `21c76203ba0379bca3f1bf6ba823a0488bad1d89` 已推送到公开仓库 `shiyi-log/private-chat` 的 `main`。首次托管 CI run `42012475721` 的静态配置/契约和 server affected jobs 成功；Server complete Go suite 因 `server/pkg/goffmpeg/tests/transcoding_test 2.go` 重复声明测试函数而失败，Android job 因 `sdkmanager: command not found` 在 APK 构建前失败，Required suite gates 也失败。[查看该 run](https://github.com/shiyi-log/private-chat/actions/runs/42012475721)。这些 CI 修复仍待复验；尚无候选 Release artifact 或已发布 Release。本地检查结果不能替代后续线上成功记录。
+当前下一版本名为 `v0.2.0-preview.1`，仍是待验证候选版本。状态截点为 2026-11-05：公开快照提交 `bd7875711268d875377391a14690d444e0929991` 已推送到公开仓库 `shiyi-log/private-chat` 的 `main`。CI run `42015978819` 的静态配置/契约、server affected tests and both builds、Server complete Go suite 均成功；Android SDK 工具和指定包也安装成功，但 APK 构建在 `native_build.py` 生成的 `projectsEvaluated` 签名注入中失败，Gradle 报 `It is too late to set storeFilePath`，因此 Required suite gates 失败。[查看该 run](https://github.com/shiyi-log/private-chat/actions/runs/42015978819)。Android 修复仍待重跑验证；此前 run `42012475721` 中的重复 Go 测试声明和 SDK 工具初始化问题已在当前提交通过。尚无候选 Release artifact 或已发布 Release。本地检查结果不能替代后续线上成功记录。
 
 ## 自动检查
 
@@ -112,6 +112,6 @@ python3 scripts/ci/package_preview.py \
 
 需要实际发布时，仓库管理员应创建 `preview-release` environment，仅允许 `main` 部署，并在该 environment 设置 `PRIVATE_CHAT_RELEASE_ENABLED=true`。缺少该变量时发布步骤失败。可按仓库协作需要配置 required reviewers；它不是本工作流的默认强制要求。检查候选 artifact 后，以 `publish=true` 触发；该请求只允许 `shiyi-log/private-chat` 的 `main`。通过完整门禁及已配置的 environment 规则后，发布 job 才取得 `contents: write` 并创建 GitHub prerelease。已有同名 tag 必须指向被验证的同一提交，已有 Release 不会被覆盖。
 
-用户已授权向公开的 `shiyi-log/private-chat` 推送筛选后的统一源码快照并发布预览版；快照已推送，但完整 Actions 门禁尚未通过，候选 artifact 核验与 prerelease 发布尚未执行。修复后的 CI 结果和后续 Release 应以对应线上运行记录为准。源码候选发布的范围须与 release notes 一致；真实短信、生产部署、真机签名与公证需要各自验证。
+用户已授权向公开的 `shiyi-log/private-chat` 推送筛选后的统一源码快照并发布预览版；快照已推送，但 Android 门禁未通过，候选 artifact 核验与 prerelease 发布尚未执行。2026-11-05 的 GitHub Dependabot 状态为 226 条 open alerts：25 critical、89 high、82 medium、30 low。此为依赖告警计数，尚未逐条验证可达性、可利用性或整改状态，不应解释为漏洞已确认、已修复或已消除。该预览用于源码评估，不代表生产就绪。后续 CI 与 Release 状态以对应线上运行记录为准；真实短信、生产部署、真机签名与公证需要各自验证。
 
 工作流行为和管理员设置依据 GitHub 官方的 [reusable workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)、[environment protection rules](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments) 和 [concurrency](https://docs.github.com/en/actions/how-tos/choose-when-workflows-run/control-workflow-concurrency) 文档。各 action 使用 2026-11-05 核对的上游 tag 对应完整 commit SHA，升级时应同时检查其 runner 最低版本。

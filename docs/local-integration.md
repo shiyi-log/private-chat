@@ -6,15 +6,15 @@
 
 | 组件 | 当前机器上的证据 | 尚待完成 |
 | --- | --- | --- |
-| Server | 独立 Compose 栈已初始化；两账号协议登录、双向文本及文件字节/SHA-256 烟测通过；已升级 proto v0.227.0，匿名 Config 探针覆盖 layer 224/225/227；本地全量 Go 测试在默认与 `privatechat_localtest` 两种模式下通过；Android/iOS 原生互通通过；公开 CI 的 affected 测试与两种构建通过 | 公开 CI 的全量 Go suite 因 `server/pkg/goffmpeg/tests/transcoding_test 2.go` 中重复测试声明失败，修复待复验；Desktop 原生客户端登录及与移动端的消息/附件互通；持续运行检查 |
-| Android | ARM64 Debug APK 已构建、安装和启动；静态配置 481/481、API identity loader 测试 5/5；模拟器已登录 Local Smoke 1，与 iOS 双向收发原生文本及附件；iOS→Android 下载文件 65 字节，SHA-256 `728ae30410c49f096f0b5eb71b3473f7c81e80e242c7b3e9bb470e102b5b0110`，并已用系统 HTML Viewer 打开 | 公开 CI 的 Android job 在安装 SDK 阶段因 `sdkmanager: command not found` 失败，APK 构建未运行；与 Desktop 原生客户端联合验收 |
+| Server | 独立 Compose 栈已初始化；两账号协议登录、双向文本及文件字节/SHA-256 烟测通过；已升级 proto v0.227.0，匿名 Config 探针覆盖 layer 224/225/227；本地全量 Go 测试在默认与 `privatechat_localtest` 两种模式下通过；Android/iOS 原生互通通过；CI run `42015978819` 的静态、affected tests/builds 和完整 Go suite 均通过 | Desktop 原生客户端登录及与移动端的消息/附件互通；持续运行检查 |
+| Android | ARM64 Debug APK 已构建、安装和启动；静态配置 481/481、API identity loader 测试 5/5；模拟器已登录 Local Smoke 1，与 iOS 双向收发原生文本及附件；iOS→Android 下载文件 65 字节，SHA-256 `728ae30410c49f096f0b5eb71b3473f7c81e80e242c7b3e9bb470e102b5b0110`，并已用系统 HTML Viewer 打开；CI runner 的 SDK 工具和指定包安装通过 | CI run `42015978819` 的 APK build 失败：`native_build.py` 通过 `projectsEvaluated` 注入签名配置过晚，Gradle 报 `It is too late to set storeFilePath`；修复待复验；与 Desktop 原生客户端联合验收 |
 | Desktop | macOS Debug App 已完成 x86_64+arm64 构建；含产物的静态配置验证 304/304；同签名缓存克隆严格验签通过 | 登录尚未完成；原生界面文本及附件互通尚未验证 |
 | iOS | ARM64 模拟器 Debug App 的 scene-v6 构建、安装成功；静态配置 457/457；启动存活检查通过 15 秒；已登录 Local Smoke 2，与 Android 双向收发原生文本及附件；Android→iOS 下载文件 69 字节，SHA-256 `484403719257afc8d8db636aa9946d8344a397414c78aec67f00cd159a3e879c`，并用原生预览打开 | 与 Desktop 原生客户端联合验收；签名分发不在本地模拟器验收范围内 |
-| Docs / CI/CD | 公开快照 `21c76203` 已推送到 `main`；CI 的静态配置/契约和 server affected job 通过 | CI 的 Server complete Go suite、Android job 和 Required suite gates 失败；没有候选 Release 或公开预览 |
+| Docs / CI/CD | 快照 `bd7875711268d875377391a14690d444e0929991` 已推送到 `main`；CI 静态、server affected tests/builds 和完整 Go suite 通过 | Android APK 构建及 Required suite gates 失败；没有候选 Release 或公开预览 |
 
 协议烟测已通过服务端核心链路，但它使用两个内存会话，不能替代原生客户端界面验收。Android 与 iOS 的双向文本及附件互通已在原生客户端完成；这项结果不覆盖 Desktop。
 
-Desktop 尚未登录，原生消息和附件互通未验收，因此五个组件的本地联调仍未全部打通。公开快照 `21c76203ba0379bca3f1bf6ba823a0488bad1d89` 已进入 `main`；[CI run 42012475721](https://github.com/shiyi-log/private-chat/actions/runs/42012475721) 中静态配置/契约和 server affected job 通过，Server complete Go suite 因重复测试声明失败，Android job 因找不到 `sdkmanager` 而未进入 APK 构建，Required suite gates 失败。CI 修复仍待复验；尚无候选 Release 或公开预览发布。
+Desktop 尚未登录，原生消息和附件互通未验收，因此五个组件的本地联调仍未全部打通。公开快照 `bd7875711268d875377391a14690d444e0929991` 已进入 `main`；[CI run 42015978819](https://github.com/shiyi-log/private-chat/actions/runs/42015978819) 中静态、server affected tests/builds 和完整 Go suite 成功，Android SDK 初始化和指定包安装成功，但 APK 构建因 Gradle 签名配置注入过晚而失败，Required suite gates 失败。该 Android 修复仍待重跑验证；尚无候选 Release 或公开预览发布。
 
 ## 服务端
 

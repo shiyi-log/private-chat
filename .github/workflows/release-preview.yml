@@ -76,6 +76,8 @@ jobs:
 
           Native app packages are not attached by this workflow. Separate macOS Debug and iOS simulator builds are manual checks; this source release does not establish signed iOS distribution, notarization, production readiness, real SMS delivery or complete multi-client message/file acceptance.
 
+          The repository has open dependency security alerts that have not all been assessed for runtime reachability or exploitability. This preview is for source evaluation and local development.
+
           See docs/ci-cd.md for build commands and remaining acceptance requirements.
           EOF
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
