@@ -17,9 +17,10 @@ docker run -d --name "$check_container" --tmpfs /var/lib/mysql \
   --default-authentication-plugin=mysql_native_password >/dev/null
 
 ready=0
+# The image's temporary initialization server accepts socket queries with networking disabled.
 for attempt in $(seq 1 90); do
   if docker exec -e MYSQL_PWD="$mysql_password" "$check_container" \
-    mysql -uroot --batch --skip-column-names -e "SELECT 1" >/dev/null 2>&1; then
+    mysql --protocol=TCP -h127.0.0.1 -uroot --batch --skip-column-names -e "SELECT 1" >/dev/null 2>&1; then
     ready=1
     break
   fi
