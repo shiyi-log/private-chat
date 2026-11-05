@@ -6,15 +6,24 @@
 
 | 组件 | 当前机器上的证据 | 尚待完成 |
 | --- | --- | --- |
-| Server | 独立 Compose 栈已初始化；两账号协议登录、双向文本及文件字节/SHA-256 烟测通过；已升级 proto v0.227.0，匿名 Config 探针覆盖 layer 224/225/227；本地全量 Go 测试在默认与 `privatechat_localtest` 两种模式下通过；Android/iOS 原生互通通过；CI run `42021714223` 的静态、affected tests/builds 和完整 Go suite 均通过 | Desktop 原生客户端登录及与移动端的消息/附件互通；持续运行检查 |
-| Android | ARM64 Debug APK 已构建、安装和启动；静态配置 481/481、API identity loader 测试 5/5；模拟器已登录 Local Smoke 1，与 iOS 双向收发原生文本及附件；iOS→Android 下载文件 65 字节，SHA-256 `728ae30410c49f096f0b5eb71b3473f7c81e80e242c7b3e9bb470e102b5b0110`，并已用系统 HTML Viewer 打开；CI run `42021714223` 的 ARM64 APK 构建、签名验证、provenance 和 artifact 上传通过 | 与 Desktop 原生客户端联合验收 |
-| Desktop | 既有 macOS Debug App 已完成 x86_64+arm64 构建；含产物的静态配置验证 304/304；同签名缓存克隆严格验签通过；统一仓库中的新完整 App 构建与原生登录验收正在进行 | 登录、原生界面文本及附件互通尚待本轮验收 |
-| iOS | ARM64 模拟器 Debug App 的 scene-v6 构建、安装成功；静态配置 457/457；启动存活检查通过 15 秒；已登录 Local Smoke 2，与 Android 双向收发原生文本及附件；Android→iOS 下载文件 69 字节，SHA-256 `484403719257afc8d8db636aa9946d8344a397414c78aec67f00cd159a3e879c`，并用原生预览打开 | 与 Desktop 原生客户端联合验收；签名分发不在本地模拟器验收范围内 |
-| Docs / CI/CD | 快照已更新至 `3051a14b0b3bd3e7f1d3b4fab1033399f5e4bfc0`；CI run `42021714223` 的五个 jobs 全部成功，含 Android ARM64 APK 与 required gates | Release preview 候选 artifact 仍待 dry run 和校验；Apple 专用 runner 尚未配置 |
+| Server | 独立 Compose 栈已初始化；两账号协议登录、双向文本及文件字节/SHA-256 烟测通过；已升级 proto v0.227.0，匿名 Config 探针覆盖 layer 224/225/227；本地全量 Go 测试在默认与 `privatechat_localtest` 两种模式下通过；Android101↔iOS102、Desktop101↔iOS102 原生互通通过；CI run `42027610583` 的静态、affected tests/builds 和完整 Go suite 均通过 | 长时间运行、负载和生产环境验证 |
+| Android | ARM64 Debug APK 已构建、安装和启动；静态配置 481/481、API identity loader 测试 5/5；模拟器已登录 Local Smoke 1，与 iOS 双向收发原生文本及附件；两份 Android↔iOS 附件均已由接收端下载、打开并核对字节数与 SHA-256；Android 同步显示 Desktop101 和 iOS102 的新增文本及附件条目，并下载、打开和校验了 iOS 新发的 79 字节附件；CI run `42027610583` 的 ARM64 APK 构建、签名验证、provenance 和 artifact 上传通过 | Desktop 新发的 63 字节附件仅在 Android 历史可见，未单独下载/打开/hash；正式分发签名与生产推送 |
+| Desktop | 统一仓库新 macOS Debug App 已完成 arm64+x86_64 构建；补齐辅助资源、重新签名后通过严格验签和独立启动；Bundle ID 为 `com.privatechat.desktop.debug`；新包已登录 Local Smoke 1，与 iOS102 双向收发原生文本及附件，接收附件已下载、打开并核对字节数与 SHA-256；新记录与附件条目已在 Android101 同账号会话中显示 | 分发签名与公证 |
+| iOS | ARM64 模拟器 Debug App 的 scene-v6 构建、安装成功；静态配置 457/457；启动存活检查通过 15 秒；已登录 Local Smoke 2，与 Android101、Desktop101 分别双向收发原生文本及附件，接收附件已用原生预览打开并核对字节数与 SHA-256 | 真机签名分发不在本地模拟器验收范围内 |
+| Docs / CI/CD | 已验证候选基线提交 `83cab6ef6ec66fa452e11f0abb50618d34a5612c`；CI run `42027610583` 五个 jobs 全部成功；Release preview dry run `42028718339` 已基于该基线生成源码候选和 release notes；`main` 必需门禁及仅限 `main` 的预览发布环境已配置并读回验证 | 后续发布资产以 Release tag 与 manifest 的 `source_commit` 为准；Apple 专用 runner 尚未配置 |
 
-协议烟测已通过服务端核心链路，但它使用两个内存会话，不能替代原生客户端界面验收。Android 与 iOS 的双向文本及附件互通已在原生客户端完成；这项结果不覆盖 Desktop。
+协议烟测已通过服务端核心链路，但它使用两个内存会话，不能替代原生客户端界面验收。本轮原生跨账号验收分别为 Android101↔iOS102 和 Desktop101↔iOS102；Desktop101 与 Android101 使用相同账号，Android 原生界面已显示 Desktop 的新文本及附件记录，并显示 iOS102 回发的文本及附件记录。同账号多设备历史同步核验通过，不能记作两个独立账号之间的聊天。Android 还下载了 iOS 新发的 79 字节附件，用系统 HTML Viewer 打开并核对 SHA-256，与 iOS 源文件及 Desktop 下载文件一致；Desktop 新发的 63 字节附件在 Android 仅确认历史可见，未单独下载、打开或哈希。四个跨账号附件方向的接收端证据如下，各方向也完成了原生文本发送与接收：
 
-Desktop 的统一仓库 Debug App 正在本轮重新构建，登录及原生消息/附件互通须以本轮验收记录为准；完成前不能声称五个平台本地联调全部打通。公开快照 `3051a14b0b3bd3e7f1d3b4fab1033399f5e4bfc0` 已进入 `main`；[CI run 42021714223](https://github.com/shiyi-log/private-chat/actions/runs/42021714223) 的静态、server affected tests/builds、完整 Go suite、Android ARM64 APK 构建和 Required suite gates 五项全部成功。Android artifact 与 build provenance 已上传；尚无候选 Release 或公开预览发布。
+| 原生发送与接收方向 | 附件 | 字节数 | 接收端 SHA-256 | 打开结果 |
+| --- | --- | --- | --- | --- |
+| Android101 → iOS102 | `android-native-upload.txt` | 69 | `484403719257afc8d8db636aa9946d8344a397414c78aec67f00cd159a3e879c` | iOS 原生预览打开 |
+| iOS102 → Android101 | `ios-native-upload-20261105.txt` | 65 | `728ae30410c49f096f0b5eb71b3473f7c81e80e242c7b3e9bb470e102b5b0110` | Android 系统 HTML Viewer 打开 |
+| Desktop101 → iOS102 | `desktop-native-upload-20261105.txt` | 63 | `89b533382f41f365a9365c9c5a732ddb1f6f5633cf9a20297b5deff1177b0cf5` | iOS 原生预览打开 |
+| iOS102 → Desktop101 | `ios-to-desktop-native-upload-20261105.txt` | 79 | `0452eed17798dfdadbbd8094f0d023a8ef33da1e98eb3411b020f28772c7565e` | Desktop 下载后用 TextEdit 打开；与发送源逐字节一致 |
+
+Desktop 双架构完整构建先以 `BUILD SUCCEEDED` 结束；随后发现将生成工程的 App 输出移到缓存目录时，三份 PRE_LINK 辅助资源仍指向旧输出目录，导致新包启动断言。仅修正忽略的生成工程路径，并将已验证的 `lib_ui.rcc`、`lib_spellcheck.rcc`、`external_microtex_bundled.rcc` 补齐到新包；重新执行本地 adhoc 签名后，严格验签退出 `0`，新包以独立工作目录启动、登录并完成上述跨账号原生往返。资源修复阶段的增量构建因本地文件协调阻塞被终止，不能记作该阶段重新完整构建成功；此次验收也不产生可分发的干净 monorepo provenance。旧 App 与旧运行数据均保留。
+
+已验证候选基线提交 `83cab6ef6ec66fa452e11f0abb50618d34a5612c` 对应的 [CI run 42027610583](https://github.com/shiyi-log/private-chat/actions/runs/42027610583) 中，静态、server affected tests/builds、完整 Go suite、Android ARM64 APK 构建和 Required suite gates 五项全部成功。Android artifact 与 build provenance 已上传。Release preview dry run `42028718339` 基于该候选基线生成了源码包和 release notes；后续发布的实际源码版本以 Release tag 和 manifest 中的 `source_commit` 为准，当前发布列表见 [GitHub Releases](https://github.com/shiyi-log/private-chat/releases)。
 
 ## 服务端
 
@@ -94,7 +103,7 @@ Android 的 `10.0.2.2` 指宿主机。三端公钥和服务端样例私钥导出
 
 当前机器已通过 App Store 安装 Xcode `27.2 (27B52)`，开发目录为 `/Applications/Xcode.app/Contents/Developer`，首次启动检查及 clang 解析通过。Android SDK/JDK、Desktop 的 CMake/原生构建工具和协议 venv 放在根目录 `toolchains` 中。iOS 本机构建使用了已记录的 Xcode 27 兼容设置；CI 的 iOS 包装器仍要求源码固定的 Xcode 26.2。各客户端 README 给出各自配置入口，完整 CI 与工具链边界见 `ci-cd.md`。
 
-完整构建日志、运行 JSON 和当前进度保存在根目录 `integration`，包括 `server-progress.md`、`server-proto-progress.md`、`server-runtime-recovery.md`、`android-progress.md`、`desktop-progress.md`、`ios-progress.md`、`ios-runtime-progress.md`、`protocol-smoke.json`。原始进度保留历史失败和修复过程，应以对应平台的最新验收记录为准。日志未纳入版本库。OTP outbox、客户端本地 API 配置和 `.env` 不应进入版本库或报告。
+完整构建日志、运行 JSON 和当前进度保存在本地根目录 `integration`，包括 `server-progress.md`、`server-proto-progress.md`、`server-runtime-recovery.md`、`android-progress.md`、`desktop-progress.md`、`ios-progress.md`、`ios-runtime-progress.md`、`protocol-smoke.json`。这些文件被忽略且不随公开源码仓库分发；它们是本机操作者的验收证据，不会出现在公开克隆中。原始进度保留历史失败和修复过程，应以对应平台的最新验收记录为准。OTP outbox、客户端本地 API 配置和 `.env` 不应进入版本库或报告。
 
 2026-11-05 最新本地 Go 验证记录已通过 `go test -count=1 ./...` 和 `go test -count=1 -tags privatechat_localtest ./...`，并通过两种模式的完整 build。验证使用 `golang:1.23.0` 容器及 FFmpeg/FFprobe 5.1.9；证据为 `integration/go-ci-root-default-verified.log`、`integration/go-ci-root-localtest-verified.log` 和完整脚本复验的 `integration/go-ci-root-script-full-verified.log`。曾阻塞全套测试的 bot username 断言、格式检查、JPEG fixture、status mock 接口和 FFmpeg 测试问题已在本地修复或改用自包含 fixture；旧 `server/data/local-integration/go-test.log` 只保留修复前失败。
 
